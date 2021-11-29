@@ -8,7 +8,7 @@ import select
 from machine import Pin, SoftUART
 
 from config import MARAX_TX, MARAX_RX, MQTT_BROKER, MQTT_USER, MQTT_PASS, MQTT_TOPIC
-from umqttsimple import MQTTClient
+from umqtt.robust import MQTTClient
 
 poll = select.poll()
 
@@ -97,12 +97,6 @@ while True:
 
         # publish to mqtt topic
         if mqtt is not None:
-            try:
-                mqtt.publish(MQTT_TOPIC, ujson.dumps(result))
-            except:
-                print("failed to publish, reconnecting")
-                mqtt.disconnect()
-                mqtt.connect()
-                pass
+            mqtt.publish(MQTT_TOPIC, ujson.dumps(result))
 
     # TODO; Need to investigate if Mpy port for esp8266 actually supports sleep or only does a busy-wait.

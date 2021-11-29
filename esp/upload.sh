@@ -23,5 +23,6 @@ putfile () {
 
 putfile boot.py
 putfile main.py
-putfile umqttsimple.py
+putfile ./micropython-lib/micropython/umqtt.simple/umqtt umqtt
+putfile ./micropython-lib/micropython/umqtt.robust/umqtt umqtt
 putfile config.py
