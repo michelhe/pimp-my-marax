@@ -17,6 +17,7 @@ uart = SoftUART(tx=Pin(MARAX_TX), rx=Pin(MARAX_RX), baudrate=9600)
 poll.register(uart)
 
 # Create MQTT Client
+mqtt = None
 if MQTT_BROKER:
     client_id = ubinascii.hexlify(machine.unique_id())
     mqtt = MQTTClient(client_id, MQTT_BROKER, user=MQTT_USER, password=MQTT_PASS)
@@ -59,25 +60,33 @@ print('listening for data on MaraX uart..')
 while True:
     read = poll.ipoll()
 
+    if time.ticks_ms() - last_update_ticks > 5000:
+        #mqtt.notify_offline()
+        pass
+
     for r, ev in read:
         if (ev & select.POLLIN) == 0:
             continue
         line = r.readline()
         if not line:
+            print('failed to get line from uart')
             continue
         try:
             line = line.decode('ascii')
         except UnicodeError:
+            print('failed to decode')
             continue  # software uart bugs sometimes
 
         # preparse line to avoid actually doing the parsing again :(
         if line[0] not in ('C', 'V'):
+            print('invalid mode')
             continue
 
         # do not parse *every line*
         if time.ticks_ms() < last_update_ticks + UPDATE_INTERVAL_MS:
             continue
 
+        print('time to publish an update')
         last_update_ticks = time.ticks_ms()
         try:
             result = parse_line(line)
@@ -87,9 +96,13 @@ while True:
             continue
 
         # publish to mqtt topic
-        if MQTT_BROKER:
-            mqtt.connect()  # wouldn't harm to re-connect, eh?
-            mqtt.publish(MQTT_TOPIC, ujson.dumps(result))
-
+        if mqtt is not None:
+            try:
+                mqtt.publish(MQTT_TOPIC, ujson.dumps(result))
+            except:
+                print("failed to publish, reconnecting")
+                mqtt.disconnect()
+                mqtt.connect()
+                pass
 
     # TODO; Need to investigate if Mpy port for esp8266 actually supports sleep or only does a busy-wait.
