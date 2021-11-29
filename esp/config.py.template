@@ -1,0 +1,7 @@
+WIFI_SSID = ''
+WIFI_PASSWORD = ''
+MQTT_BROKER = ''
+
+# May use None here
+MQTT_USER = ''
+MQTT_PASS = ''
