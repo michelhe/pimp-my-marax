@@ -7,20 +7,19 @@ import machine
 import select
 from machine import Pin, SoftUART
 
-from config import MQTT_BROKER, MQTT_USER, MQTT_PASS, MQTT_TOPIC
+from config import MARAX_TX, MARAX_RX, MQTT_BROKER, MQTT_USER, MQTT_PASS, MQTT_TOPIC
 from umqttsimple import MQTTClient
 
 poll = select.poll()
 
 # Create SoftUART device
-MARAX_RX = 15  # D8
-MARAX_TX = 13  # D7
 uart = SoftUART(tx=Pin(MARAX_TX), rx=Pin(MARAX_RX), baudrate=9600)
 poll.register(uart)
 
 # Create MQTT Client
-client_id = ubinascii.hexlify(machine.unique_id())
-mqtt = MQTTClient(client_id, MQTT_BROKER, user=MQTT_USER, password=MQTT_PASS)
+if MQTT_BROKER:
+    client_id = ubinascii.hexlify(machine.unique_id())
+    mqtt = MQTTClient(client_id, MQTT_BROKER, user=MQTT_USER, password=MQTT_PASS)
 
 while True:
     try:
@@ -88,8 +87,9 @@ while True:
             continue
 
         # publish to mqtt topic
-        mqtt.connect()  # wouldn't harm to re-connect, eh?
-        mqtt.publish(MQTT_TOPIC, ujson.dumps(result))
+        if MQTT_BROKER:
+            mqtt.connect()  # wouldn't harm to re-connect, eh?
+            mqtt.publish(MQTT_TOPIC, ujson.dumps(result))
 
 
     # TODO; Need to investigate if Mpy port for esp8266 actually supports sleep or only does a busy-wait.

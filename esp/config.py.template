@@ -1,7 +1,9 @@
-WIFI_SSID = ''
-WIFI_PASSWORD = ''
-MQTT_BROKER = ''
+WIFI_SSID = 'your_wifi_ssid'
+WIFI_PASSWORD = 'your_wifi_password'
+MARAX_RX = 15  # D8
+MARAX_TX = 13  # D7
 
-# May use None here
+# May use None here if you don't want mqtt
+MQTT_BROKER = ''
 MQTT_USER = ''
 MQTT_PASS = ''
