@@ -49,13 +49,13 @@ while True:
             if mqtt is not None:
                 print('MaraX is offline!')
                 reported_offline = True
-                mqtt.publish(MQTT_TOPIC_STATUS, '{"online": false}')
+                mqtt.publish(MQTT_TOPIC_STATUS, 'offline')
                 time.sleep(10)
         continue
     else:
         if reported_offline is not None and reported_offline:
             reported_offline = None
-            mqtt.publish(MQTT_TOPIC_STATUS, '{"online": true}')
+            mqtt.publish(MQTT_TOPIC_STATUS, 'online')
             print('MaraX is online!')
 
     # do not parse *every line*
