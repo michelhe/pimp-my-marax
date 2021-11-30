@@ -3,7 +3,10 @@ WIFI_PASSWORD = 'your_wifi_password'
 MARAX_RX = 15  # D8
 MARAX_TX = 13  # D7
 
+# set to True if you want to test it without connecting to the real MaraX
+MOCK_SETUP = False
+
 # May use None here if you don't want mqtt
-MQTT_BROKER = ''
-MQTT_USER = ''
-MQTT_PASS = ''
+MQTT_BROKER =bv''
+MQTT_USER = b''
+MQTT_PASS = b''

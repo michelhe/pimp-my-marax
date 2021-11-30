@@ -4,23 +4,26 @@ import time
 import ujson
 import ubinascii
 import machine
-import select
-from machine import Pin, SoftUART
-
-from config import MARAX_TX, MARAX_RX, MQTT_BROKER, MQTT_USER, MQTT_PASS, MQTT_TOPIC
+from config import MOCK_SETUP, MQTT_BROKER, MQTT_USER, MQTT_PASS
 from umqtt.robust import MQTTClient
 
-poll = select.poll()
+from marax import get_sensor
 
-# Create SoftUART device
-uart = SoftUART(tx=Pin(MARAX_TX), rx=Pin(MARAX_RX), baudrate=9600)
-poll.register(uart)
+marax = get_sensor()
 
 # Create MQTT Client
 mqtt = None
 if MQTT_BROKER:
+    MQTT_TOPIC_STATUS = b'marax/status'
+    MQTT_TOPIC_SENSOR = b'marax/uart'
+    if MOCK_SETUP:
+        MQTT_TOPIC_SENSOR = b'mock_' + MQTT_TOPIC_SENSOR
+        MQTT_TOPIC_STATUS = b'mock_' + MQTT_TOPIC_STATUS
     client_id = ubinascii.hexlify(machine.unique_id())
-    mqtt = MQTTClient(client_id, MQTT_BROKER, user=MQTT_USER, password=MQTT_PASS)
+    mqtt = MQTTClient(client_id,
+                      MQTT_BROKER,
+                      user=MQTT_USER,
+                      password=MQTT_PASS)
 
 while True:
     try:
@@ -32,71 +35,38 @@ while True:
     else:
         break
 
-def parse_line(line):
-    orig_line = line
-    assert line is not None
-    mode = line[0:1]
-    assert mode in ('C', 'V'), "unknown mode: {}".format(mode)
-
-    line = line[1:].split(',')
-
-    result = {}
-    assert len(line) == 6, "unknown line: {}".format(orig_line)
-    result['mode'] = mode
-    result['gicarVw'] = line[0]
-    result['boiler_temp'] = int(line[1])
-    result['boiler_target'] = int(line[2])
-    result['hx_temp'] = int(line[3])
-    result['countdown'] = int(line[4])
-    result['heating_element_state'] = bool(line[5])
-
-    return result
-
-
 last_update_ticks = time.ticks_ms()
-UPDATE_INTERVAL_MS = 1000
+UPDATE_INTERVAL_MS = 2000
+
+reported_offline = True
 
 print('listening for data on MaraX uart..')
 while True:
-    read = poll.ipoll()
+    line = marax.recv_line()
+    if not line:
+        if marax.is_offline():
+            if mqtt is not None:
+                reported_offline = True
+                mqtt.publish(MQTT_TOPIC_STATUS, '{"online": false}')
+    else:
+        if reported_offline is not None and reported_offline:
+            reported_offline = None
+            mqtt.publish(MQTT_TOPIC_STATUS, '{"online": true}')
 
-    if time.ticks_ms() - last_update_ticks > 5000:
-        #mqtt.notify_offline()
-        pass
+    # do not parse *every line*
+    if time.ticks_ms() < last_update_ticks + UPDATE_INTERVAL_MS:
+        continue
 
-    for r, ev in read:
-        if (ev & select.POLLIN) == 0:
-            continue
-        line = r.readline()
-        if not line:
-            print('failed to get line from uart')
-            continue
-        try:
-            line = line.decode('ascii')
-        except UnicodeError:
-            print('failed to decode')
-            continue  # software uart bugs sometimes
+    try:
+        result = marax.parse(line)
+        print(result)
+    except Exception as e:
+        print("Failed to parse line: {}, error={}".format(line, e))
+        continue
 
-        # preparse line to avoid actually doing the parsing again :(
-        if line[0] not in ('C', 'V'):
-            print('invalid mode')
-            continue
-
-        # do not parse *every line*
-        if time.ticks_ms() < last_update_ticks + UPDATE_INTERVAL_MS:
-            continue
-
-        print('time to publish an update')
-        last_update_ticks = time.ticks_ms()
-        try:
-            result = parse_line(line)
-            print(result)
-        except Exception as e:
-            print("Failed to parse line: {}, error={}".format(line, e))
-            continue
-
-        # publish to mqtt topic
-        if mqtt is not None:
-            mqtt.publish(MQTT_TOPIC, ujson.dumps(result))
+    # publish to mqtt topic
+    if mqtt is not None:
+        mqtt.publish(MQTT_TOPIC_SENSOR, ujson.dumps(result))
+    last_update_ticks = time.ticks_ms()
 
     # TODO; Need to investigate if Mpy port for esp8266 actually supports sleep or only does a busy-wait.
