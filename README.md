@@ -1,5 +1,7 @@
 # Pimp My Mara-X
 
+![](images/sensors-ha.png)
+
 [Lelit PL62x (Mara-X)](https://marax.lelit.com/) Espresso Machine enhancments, made in pursuit of getting a better understanding of their unique "Coffee Priority Mode" behaviour.
 Inspired by projects such as [marax_monitor](https://github.com/bancbanus/marax_monitor) and [marax_timer](https://github.com/bancbanus/marax_monitor)
 
@@ -36,7 +38,3 @@ sensor:
     unit_of_measurement: "°C"
     value_template: "{{ value_json.boiler_target }}"
 ```
-
-This is my current result:
-
-![](images/sensors-ha.png)
