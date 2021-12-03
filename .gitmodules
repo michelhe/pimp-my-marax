@@ -1,3 +1,0 @@
-[submodule "esp/micropython-lib"]
-	path = sensor/micropython-lib
-	url = https://github.com/micropython/micropython-lib.git

@@ -5,7 +5,6 @@ import ujson
 import ubinascii
 import machine
 from config import MOCK_SETUP, MQTT_BROKER, MQTT_USER, MQTT_PASS
-from umqtt.robust import MQTTClient
 
 from marax import get_sensor
 
@@ -14,26 +13,31 @@ marax = get_sensor()
 # Create MQTT Client
 mqtt = None
 if MQTT_BROKER:
-    MQTT_TOPIC_STATUS = b'marax/status'
-    MQTT_TOPIC_SENSOR = b'marax/uart'
-    if MOCK_SETUP:
-        MQTT_TOPIC_SENSOR = b'mock_' + MQTT_TOPIC_SENSOR
-        MQTT_TOPIC_STATUS = b'mock_' + MQTT_TOPIC_STATUS
-    client_id = ubinascii.hexlify(machine.unique_id())
-    mqtt = MQTTClient(client_id,
-                      MQTT_BROKER,
-                      user=MQTT_USER,
-                      password=MQTT_PASS)
-
-while True:
     try:
-        print('Connecting to MQTT broker: {}'.format(MQTT_BROKER))
-        mqtt.connect()
-    except Exception as e:
-        print('Connection failed, trying again in a few seconds..')
-        time.sleep(10)
+        from umqtt.robust import MQTTClient
+    except ImportError:
+        print("WARNING: mqtt is configured but umqtt isn't installed, please install manually")
     else:
-        break
+        MQTT_TOPIC_STATUS = b'marax/status'
+        MQTT_TOPIC_SENSOR = b'marax/uart'
+        if MOCK_SETUP:
+            MQTT_TOPIC_SENSOR = b'mock_' + MQTT_TOPIC_SENSOR
+            MQTT_TOPIC_STATUS = b'mock_' + MQTT_TOPIC_STATUS
+        client_id = ubinascii.hexlify(machine.unique_id())
+        mqtt = MQTTClient(client_id,
+                        MQTT_BROKER,
+                        user=MQTT_USER,
+                        password=MQTT_PASS)
+
+        while True:
+            try:
+                print('Connecting to MQTT broker: {}'.format(MQTT_BROKER))
+                mqtt.connect()
+            except Exception as e:
+                print('Connection failed, trying again in a few seconds..')
+                time.sleep(10)
+            else:
+                break
 
 last_update_ticks = time.ticks_ms()
 UPDATE_INTERVAL_MS = 2000

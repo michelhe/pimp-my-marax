@@ -23,3 +23,11 @@ while sta.isconnected() == False:
 
 print('Connected!')
 print(sta.ifconfig())
+
+try:
+    import umqtt.robust
+except ImportError:
+    print('failed to find umqtt.robust package, using upip to install')
+    import upip
+    upip.install("micropython-umqtt.simple")
+    upip.install("micropython-umqtt.robust")
