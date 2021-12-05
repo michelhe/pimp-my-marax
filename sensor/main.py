@@ -64,8 +64,8 @@ class PumpSensor(object):
 
 pump = PumpSensor()
 
-last_update_ticks = None
 UPDATE_INTERVAL_MS = 2000
+last_update_ticks = time.ticks_ms() - UPDATE_INTERVAL_MS
 
 reported_offline = True
 
@@ -126,8 +126,7 @@ try:
 
         # publish to mqtt topic
 
-        if mqtt is not None and last_update_ticks is not None and time.ticks_ms(
-        ) - last_update_ticks >= UPDATE_INTERVAL_MS:
+        if mqtt is not None and time.ticks_ms() - last_update_ticks >= UPDATE_INTERVAL_MS:
             print('publishing')
             mqtt.publish(MQTT_TOPIC_SENSOR, ujson.dumps(r))
             last_update_ticks = time.ticks_ms()
