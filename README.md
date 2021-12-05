@@ -9,7 +9,7 @@ Currently I'm just using old components laying out in my house.
 
 * RaspberryPI-4 that powers my [HomeAssistant](https://www.home-assistant.io/) installation, and also an MQTT broker ([mosquitto](https://pimylifeup.com/raspberry-pi-mosquitto-mqtt-server/))
 * A WiFi smart outlet that is managed by HomeAssitant to control the coffee machine power.
-* For my [MaraX Monitor](#markdown-header-esp8266-monitor), I use Wemos D1 Mini (ESP8266) clone. see the next section for more detail.
+* For my [MaraX Monitor](#esp8266-monitor), I use Wemos D1 Mini (ESP8266) clone. see the next section for more detail.
 ## ESP8266 monitor
 
 ![](images/esp8266.png)
