@@ -1,12 +1,16 @@
 # Hardware
 
-I use a Wemos D1 Mini clone, and hook it up to the TX/RX connections in the MaraX. (see this [Reddit post](https://www.reddit.com/r/espresso/comments/hft5zv/data_visualisation_lelit_marax_mod/) for more information)
+I use a Wemos D1 Mini clone, and hook it up to the TX/RX connections in the MaraX's Gicar control unit. (see this [Reddit post](https://www.reddit.com/r/espresso/comments/hft5zv/data_visualisation_lelit_marax_mod/) for more information)
 
 Display: SSD1306 compatible 0.96 OLED display (i2c)
-Also glued a reed sensor to the pump to implement a shot timer, simillar to https://github.com/alexrus/marax_timer/
+Also glued a reed sensor to the pump to implement a shot timer, simillar to https://github.com/alexrus/marax_timer/.
 
 ## Hardware wiring
 ![](../images/wiring.png)
+
+### Common ground TODO
+Currently there are "errors" in the UART communication in my machine which I handle in software, not too frequent but still present.
+It could be either faulty soldering in my ESP8266, or the lack of common ground between the ESP8266 and The Gicar control unit on the Marax.
 
 # Installation
 
