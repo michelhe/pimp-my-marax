@@ -3,8 +3,10 @@
 I use a Wemos D1 Mini clone, and hook it up to the TX/RX connections in the MaraX. (see this [Reddit post](https://www.reddit.com/r/espresso/comments/hft5zv/data_visualisation_lelit_marax_mod/) for more information)
 
 Display: SSD1306 compatible 0.96 OLED display (i2c)
-Also attached a reed sensor to the pump but it doesn't seem to work yet.
+Also glued a reed sensor to the pump to implement a shot timer, simillar to https://github.com/alexrus/marax_timer/
 
+## Hardware wiring
+![](../images/wiring.png)
 
 # Installation
 
