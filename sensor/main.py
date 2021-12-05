@@ -11,26 +11,55 @@ marax = get_sensor()
 
 
 class PumpSensor(object):
+    _PUMP_OFF_RETRY_COUNT = 10
+
     def __init__(self):
         self.pin = Pin(0, Pin.IN, Pin.PULL_UP)
-        self.old_value = self.pin.value()
+        self.was_on = self.pin.value() == 0
         self.start_time = None
+        self.retries = self._PUMP_OFF_RETRY_COUNT
 
-    def check(self):
-        new_value = self.pin.value()
+    def reset_retries(self):
+        self.retries = self._PUMP_OFF_RETRY_COUNT
 
-        if new_value == 0 and self.old_value == 1:
-            print('Pump detected! starting timer')
-            self.start_time = time.ticks_ms()
-
-        elif new_value == 1 and self.old_value == 0:
-            print('')
-            self.start_time = None
-
-        self.old_value = new_value
-        if new_value == 0:
+    def shot_timer_elapsed(self):
+        if self.start_time is not None:
             return (time.ticks_ms() - self.start_time) // 1000
         return None
+
+    def start_shot_timer(self):
+        print('[PUMP]: Pump detected! starting timer')
+        self.start_time = time.ticks_ms()
+        self.retries = self._PUMP_OFF_RETRY_COUNT
+
+    def stop_shot_timer(self):
+        elapsed = self.shot_timer_elapsed()
+        print('[PUMP] Shot timer stopped after {}s'.format(elapsed))
+        self.start_time = None
+        self.retries = 0
+
+    def check(self):
+        now_on = self.pin.value() == 0
+        was_on = self.was_on
+
+        if now_on and not was_on:
+            # detected pump started
+            if self.start_time is None:
+                self.start_shot_timer()
+            else:
+                print("[PUMP] Geesh I'm back!")
+                self.reset_retries()
+        if now_on:
+            self.reset_retries()
+        if not now_on and self.start_time is not None:
+            print(
+                '[PUMP] Timer is running but pump sensor off, retries left {}'.
+                format(self.retries))
+            self.retries -= 1
+            if self.retries <= 0:
+                self.stop_shot_timer()
+
+        self.was_on = now_on
 
 
 pump = PumpSensor()
@@ -55,8 +84,10 @@ def wait_for_activity():
         time.sleep_ms(1000)
 
 
+last_good_result = None
 try:
     while True:
+        pump.check()
         line = marax.recv_line()
         if line is None:
             if marax.is_offline():
@@ -81,9 +112,15 @@ try:
                 display.text("MaraX ON", 0, 0, 1)
                 display.show()
 
-        r = marax.parse(line)
-
-        shot_timer_elapsed = pump.check()
+        try:
+            r = marax.parse(line)
+            last_good_result = r
+        except:
+            print('parsing failure...')
+            r = last_good_result
+            if r is None:
+                continue
+        shot_timer_elapsed = pump.shot_timer_elapsed()
         # append the pump status to the resuly
         r["pump_on"] = shot_timer_elapsed is not None
 
@@ -112,12 +149,15 @@ try:
             display.text("HEATING...", 0, 64 - 10, 1)
 
         display.show()
-
-        time.sleep_ms(100)
 except Exception as e:
     display.fill(0)
     display.text("EXCEPTION!!!", 0, 10, 1)
     display.text(str(type(e).__name__), 0, 20, 1)
     display.show()
-    time.sleep(10)
-    machine.reset()
+    t = Timer(-1)
+
+    def bye_bye(t):
+        machine.reset()
+
+    t.init(mode=Timer.ONE_SHOT, period=10000, callback=bye_bye)
+    raise
