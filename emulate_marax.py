@@ -20,7 +20,7 @@ if __name__ == '__main__':
     try:
         while True:
             s.write(b'C123B,126,126,093,0000,0\n')
-            time.sleep(0.2)
+            time.sleep(0.5)
     except KeyboardInterrupt:
         print('stopping...')
         s.close()

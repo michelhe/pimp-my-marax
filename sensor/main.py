@@ -2,80 +2,122 @@
 
 import time
 import ujson
-import ubinascii
 import machine
-from config import MOCK_SETUP, MQTT_BROKER, MQTT_USER, MQTT_PASS
+from machine import Pin, Timer
 
 from marax import get_sensor
 
 marax = get_sensor()
 
-# Create MQTT Client
-mqtt = None
-if MQTT_BROKER:
-    try:
-        from umqtt.robust import MQTTClient
-    except ImportError:
-        print("WARNING: mqtt is configured but umqtt isn't installed, please install manually")
-    else:
-        MQTT_TOPIC_STATUS = b'marax/status'
-        MQTT_TOPIC_SENSOR = b'marax/uart'
-        if MOCK_SETUP:
-            MQTT_TOPIC_SENSOR = b'mock_' + MQTT_TOPIC_SENSOR
-            MQTT_TOPIC_STATUS = b'mock_' + MQTT_TOPIC_STATUS
-        client_id = ubinascii.hexlify(machine.unique_id())
-        mqtt = MQTTClient(client_id,
-                        MQTT_BROKER,
-                        user=MQTT_USER,
-                        password=MQTT_PASS)
 
-        while True:
-            try:
-                print('Connecting to MQTT broker: {}'.format(MQTT_BROKER))
-                mqtt.connect()
-            except Exception as e:
-                print('Connection failed, trying again in a few seconds..')
-                time.sleep(10)
-            else:
-                break
+class PumpSensor(object):
+    def __init__(self):
+        self.pin = Pin(0, Pin.IN, Pin.PULL_UP)
+        self.old_value = self.pin.value()
+        self.start_time = None
 
-last_update_ticks = time.ticks_ms()
+    def check(self):
+        new_value = self.pin.value()
+
+        if new_value == 0 and self.old_value == 1:
+            print('Pump detected! starting timer')
+            self.start_time = time.ticks_ms()
+
+        elif new_value == 1 and self.old_value == 0:
+            print('')
+            self.start_time = None
+
+        self.old_value = new_value
+        if new_value == 0:
+            return (time.ticks_ms() - self.start_time) // 1000
+        return None
+
+
+pump = PumpSensor()
+
+last_update_ticks = None
 UPDATE_INTERVAL_MS = 2000
 
 reported_offline = True
 
 marax.connect()
 print('listening for data on MaraX uart..')
-while True:
-    line = marax.recv_line()
-    if line is None:
-        if marax.is_offline():
-            if mqtt is not None:
-                print('MaraX is offline!')
-                reported_offline = True
-                mqtt.publish(MQTT_TOPIC_STATUS, 'offline')
-                time.sleep(10)
-        continue
-    else:
-        if reported_offline is not None and reported_offline:
-            reported_offline = None
-            mqtt.publish(MQTT_TOPIC_STATUS, 'online')
-            print('MaraX is online!')
 
-    # do not parse *every line*
-    if time.ticks_ms() < last_update_ticks + UPDATE_INTERVAL_MS:
-        continue
+last_result = None
 
-    try:
-        result = marax.parse(line)
-        print(result)
-    except Exception as e:
-        print("Failed to parse line: {}, error={}".format(line, e))
-        continue
 
-    # publish to mqtt topic
-    if mqtt is not None:
-        mqtt.publish(MQTT_TOPIC_SENSOR, ujson.dumps(result))
-    last_update_ticks = time.ticks_ms()
+def wait_for_activity():
+    while True:
+        line = marax.recv_line()
+        if line is not None:
+            # It's okay to drop the line, we'll grab the next one
+            break
+        time.sleep_ms(1000)
 
-    # TODO; Need to investigate if Mpy port for esp8266 actually supports sleep or only does a busy-wait.
+
+try:
+    while True:
+        line = marax.recv_line()
+        if line is None:
+            if marax.is_offline():
+                if mqtt is not None:
+                    print('MaraX is offline!')
+                    mqtt.publish(MQTT_TOPIC_STATUS, 'offline')
+                    reported_offline = True
+                    display.fill(0)
+                    display.text("MaraX OFF", 0, 0, 1)
+                    display.show()
+                    time.sleep(10)
+                    display.poweroff()
+                    wait_for_activity()
+            continue
+        else:
+            if reported_offline is not None and reported_offline:
+                reported_offline = None
+                mqtt.publish(MQTT_TOPIC_STATUS, 'online')
+                print('MaraX is online!')
+                display.poweron()
+                display.fill(0)
+                display.text("MaraX ON", 0, 0, 1)
+                display.show()
+
+        r = marax.parse(line)
+
+        shot_timer_elapsed = pump.check()
+        # append the pump status to the resuly
+        r["pump_on"] = shot_timer_elapsed is not None
+
+        # publish to mqtt topic
+
+        if mqtt is not None and last_update_ticks is not None and time.ticks_ms(
+        ) - last_update_ticks >= UPDATE_INTERVAL_MS:
+            print('publishing')
+            mqtt.publish(MQTT_TOPIC_SENSOR, ujson.dumps(r))
+            last_update_ticks = time.ticks_ms()
+
+        # update the display
+        display.fill(0)
+        display.text(
+            "{} mode".format("Coffee" if r['mode'] == 'C' else 'Steam'), 0, 0,
+            1)
+        display.text("HX: {}".format(r['hx_temp']), 0, 10, 1)
+        display.text(
+            "Boiler: {}/{}".format(r['boiler_temp'], r['boiler_target']), 0,
+            20, 1)
+        if shot_timer_elapsed is not None:
+            # also need to display the shot timer
+            display.text('TIMER: ' + str(shot_timer_elapsed) + 's', 0, 64 - 20,
+                         1)
+        if r['heating_element_state'] == True:
+            display.text("HEATING...", 0, 64 - 10, 1)
+
+        display.show()
+
+        time.sleep_ms(100)
+except Exception as e:
+    display.fill(0)
+    display.text("EXCEPTION!!!", 0, 10, 1)
+    display.text(str(type(e).__name__), 0, 20, 1)
+    display.show()
+    time.sleep(10)
+    machine.reset()

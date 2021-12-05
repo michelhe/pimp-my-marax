@@ -10,3 +10,8 @@ MOCK_SETUP = False
 MQTT_BROKER =bv''
 MQTT_USER = b''
 MQTT_PASS = b''
+
+# Webrepl access for ease of development
+WEBREPL_ENABLED = False
+# It is recommended to set a secret password, if you don't  set
+WEBREPL_PASSWORD = 'secret'

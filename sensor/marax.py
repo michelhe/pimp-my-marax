@@ -50,7 +50,8 @@ class MaraxSensor(object):
             try:
                 line = line.decode('ascii')
             except UnicodeError:
-                print('failed to decode')
+                print('failed to decode line:')
+                print(line)
                 continue  # software uart bugs sometimes
 
             # preparse line to avoid actually doing the parsing again :(
@@ -84,6 +85,6 @@ class MaraxSensor(object):
         result['boiler_target'] = int(line[2])
         result['hx_temp'] = int(line[3])
         result['countdown'] = int(line[4])
-        result['heating_element_state'] = bool(line[5])
+        result['heating_element_state'] = bool(int(line[5]))
 
         return result
