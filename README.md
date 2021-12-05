@@ -21,6 +21,8 @@ I use a Wemos D1 Mini clone, and hook it up to the TX/RX connections in the Mara
 Display: SSD1306 compatible 0.96 OLED display (i2c)
 Also glued a reed sensor to the pump to implement a shot timer, simillar to https://github.com/alexrus/marax_timer/.
 
+Currently 3D printed [this case](https://www.thingiverse.com/thing:2934049) for ESP8266 and SSD1306 display
+
 ![](images/wiring.png)
 
 #### Common-Ground (TODO)
