@@ -1,7 +1,7 @@
 # Pimp My Mara-X
 
 [Lelit PL62x (Mara-X)](https://marax.lelit.com/) Espresso Machine enhancments, made in pursuit of getting a better understanding of their unique "Coffee Priority Mode" behaviour.
-Inspired by projects such as [marax_monitor](https://github.com/bancbanus/marax_monitor) and [marax_timer](https://github.com/bancbanus/marax_monitor)
+Inspired by projects such as [marax_monitor](https://github.com/bancbanus/marax_monitor) and [marax_timer](https://github.com/alexrus/marax_timer)
 
 ## My Setup
 
