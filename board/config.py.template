@@ -13,5 +13,5 @@ MQTT_PASS = b''
 
 # Webrepl access for ease of development
 WEBREPL_ENABLED = False
-# It is recommended to set a secret password, if you don't  set
+# If using Webrepl, you must use a secret password
 WEBREPL_PASSWORD = 'secret'
