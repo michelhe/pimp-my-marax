@@ -11,13 +11,12 @@ marax = get_sensor()
 
 
 class PumpSensor(object):
-    _PUMP_OFF_RETRY_COUNT = 10
+    _GRACE_TIMEOUT_MS = 666
 
     def __init__(self):
         self.pin = Pin(0, Pin.IN, Pin.PULL_UP)
-        self.was_on = self.pin.value() == 0
         self.start_time = None
-        self.retries = self._PUMP_OFF_RETRY_COUNT
+        self.stop_time = None
 
     def reset_retries(self):
         self.retries = self._PUMP_OFF_RETRY_COUNT
@@ -30,47 +29,39 @@ class PumpSensor(object):
     def start_shot_timer(self):
         print('[PUMP]: Pump detected! starting timer')
         self.start_time = time.ticks_ms()
-        self.retries = self._PUMP_OFF_RETRY_COUNT
+        self.stop_time = None
 
     def stop_shot_timer(self):
         elapsed = self.shot_timer_elapsed()
         print('[PUMP] Shot timer stopped after {}s'.format(elapsed))
         self.start_time = None
-        self.retries = 0
+        self.stop_time = None
 
     def check(self):
-        now_on = self.pin.value() == 0
-        was_on = self.was_on
+        pump_detected = self.pin.value() == 0
+        timer_started = self.start_time is not None
 
-        if now_on and not was_on:
-            # detected pump started
-            if self.start_time is None:
-                self.start_shot_timer()
-            else:
-                print("[PUMP] Geesh I'm back!")
-                self.reset_retries()
-        if now_on:
-            self.reset_retries()
-        if not now_on and self.start_time is not None:
-            print(
-                '[PUMP] Timer is running but pump sensor off, retries left {}'.
-                format(self.retries))
-            self.retries -= 1
-            if self.retries <= 0:
+        if pump_detected and not timer_started:
+            self.start_shot_timer()
+        if not pump_detected and timer_started:
+            if self.stop_time is None:
+                self.stop_time = time.ticks_ms()
+            elif time.ticks_ms() - self.stop_time > self._GRACE_TIMEOUT_MS:
                 self.stop_shot_timer()
-
-        self.was_on = now_on
+        else:
+            self.stop_time = None
 
 
 pump = PumpSensor()
 
-UPDATE_INTERVAL_MS = 2000
-last_update_ticks = time.ticks_ms() - UPDATE_INTERVAL_MS
+PUBLISH_INTERVAL_MS = 2000
+last_update_ticks = time.ticks_ms() - PUBLISH_INTERVAL_MS
+
+DISPLAY_UPDATE_INTERVAL_MS = 250
+last_display_update_ticks = time.ticks_ms() - DISPLAY_UPDATE_INTERVAL_MS
 
 reported_offline = True
-
 marax.connect()
-print('listening for data on MaraX uart..')
 
 last_result = None
 
@@ -126,28 +117,30 @@ try:
 
         # publish to mqtt topic
 
-        if mqtt is not None and time.ticks_ms() - last_update_ticks >= UPDATE_INTERVAL_MS:
+        if mqtt is not None and time.ticks_ms() - last_update_ticks >= PUBLISH_INTERVAL_MS:
             print('publishing')
             mqtt.publish(MQTT_TOPIC_SENSOR, ujson.dumps(r))
             last_update_ticks = time.ticks_ms()
 
-        # update the display
-        display.fill(0)
-        display.text(
-            "{} mode".format("Coffee" if r['mode'] == 'C' else 'Steam'), 0, 0,
-            1)
-        display.text("HX: {}".format(r['hx_temp']), 0, 10, 1)
-        display.text(
-            "Boiler: {}/{}".format(r['boiler_temp'], r['boiler_target']), 0,
-            20, 1)
-        if shot_timer_elapsed is not None:
-            # also need to display the shot timer
-            display.text('TIMER: ' + str(shot_timer_elapsed) + 's', 0, 64 - 20,
-                         1)
-        if r['heating_element_state'] == True:
-            display.text("HEATING...", 0, 64 - 10, 1)
+        if time.ticks_ms() - last_display_update_ticks >= DISPLAY_UPDATE_INTERVAL_MS:
+            # update the display
+            display.fill(0)
+            display.text(
+                "{} mode".format("Coffee" if r['mode'] == 'C' else 'Steam'), 0, 0,
+                1)
+            display.text("HX: {}".format(r['hx_temp']), 0, 10, 1)
+            display.text(
+                "Boiler: {}/{}".format(r['boiler_temp'], r['boiler_target']), 0,
+                20, 1)
+            if shot_timer_elapsed is not None:
+                # also need to display the shot timer
+                display.text('TIMER: ' + str(shot_timer_elapsed) + 's', 0, 64 - 20,
+                            1)
+            if r['heating_element_state'] == True:
+                display.text("HEATING...", 0, 64 - 10, 1)
 
-        display.show()
+            display.show()
+            last_display_update_ticks = time.ticks_ms()
 except Exception as e:
     display.fill(0)
     display.text("EXCEPTION!!!", 0, 10, 1)

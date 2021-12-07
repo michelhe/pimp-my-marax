@@ -34,6 +34,9 @@ class MaraxSensor(object):
         self.last_line_time = time.ticks_ms()
 
     def connect(self):
+        txpin = Pin(MARAX_TX)
+        rxpin = Pin(MARAX_RX, Pin.IN, Pin.PULL_UP)
+        print('setting up MaraX uart: TX={} RX={}'.format(txpin, rxpin))
         self.uart = SoftUART(tx=Pin(MARAX_TX), rx=Pin(MARAX_RX), baudrate=9600)
         poll.register(self.uart)
 
