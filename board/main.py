@@ -18,9 +18,6 @@ class PumpSensor(object):
         self.start_time = None
         self.stop_time = None
 
-    def reset_retries(self):
-        self.retries = self._PUMP_OFF_RETRY_COUNT
-
     def shot_timer_elapsed(self):
         if self.start_time is not None:
             return (time.ticks_ms() - self.start_time) // 1000
