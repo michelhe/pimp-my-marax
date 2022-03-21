@@ -122,9 +122,7 @@ try:
         if time.ticks_ms() - last_display_update_ticks >= DISPLAY_UPDATE_INTERVAL_MS:
             # update the display
             display.fill(0)
-            display.text(
-                "{} mode".format("Coffee" if r['mode'] == 'C' else 'Steam'), 0, 0,
-                1)
+            display.text(r['mode'], 0, 0, 1)
             display.text("HX: {}".format(r['hx_temp']), 0, 10, 1)
             display.text(
                 "Boiler: {}/{}".format(r['boiler_temp'], r['boiler_target']), 0,
