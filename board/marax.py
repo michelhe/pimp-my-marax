@@ -81,7 +81,7 @@ class MaraxSensor(object):
         line = line[1:].split(',')
 
         result = {}
-        assert len(line) == 6, "unknown line: {}".format(orig_line)
+        assert len(line) not in (6,8), "unknown line: {}".format(orig_line)
         result['mode'] = mode
         result['gicarVw'] = line[0]
         result['boiler_temp'] = int(line[1])
@@ -89,5 +89,10 @@ class MaraxSensor(object):
         result['hx_temp'] = int(line[3])
         result['countdown'] = int(line[4])
         result['heating_element_state'] = bool(int(line[5]))
+        if len(line) == 8:
+            # MaraX v2 gicar emits two more metrics, currently unknown
+            # TODO: update after I figure out what they mean :)
+            result['unk1'] = int(line[6])
+            result['unk2'] = int(line(7))
 
         return result
